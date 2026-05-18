@@ -1,0 +1,79 @@
+diff --git a/src/main/java/com/book/dao/BookDao.java b/src/main/java/com/book/dao/BookDao.java
+index 378a9b0..b532891 100644
+--- a/src/main/java/com/book/dao/BookDao.java
++++ b/src/main/java/com/book/dao/BookDao.java
+@@ -31,6 +31,7 @@ public class BookDao {
+     private final static String MATCH_BOOK_SQL="SELECT count(*) FROM book_info WHERE book_id like ?  or name like ?  ";
+     //根据书号查询图书
+     private final static String GET_BOOK_SQL="SELECT * FROM book_info where book_id = ? ";
++    private final static String GET_BOOK_STATE_SQL="SELECT state FROM book_info where book_id = ? ";
+ 
+     public int matchBook(String searchWord){
+         String swcx="%"+searchWord+"%";
+@@ -135,6 +136,10 @@ public class BookDao {
+         });
+         return book;
+     }
++
++    public int getBookState(long bookId){
++        return jdbcTemplate.queryForObject(GET_BOOK_STATE_SQL,new Object[]{bookId},Integer.class);
++    }
+     public int editBook(Book book){
+         Long bookId=book.getBookId();
+         String name=book.getName();
+diff --git a/src/main/java/com/book/service/LendService.java b/src/main/java/com/book/service/LendService.java
+index 2a271cb..404f6b7 100644
+--- a/src/main/java/com/book/service/LendService.java
++++ b/src/main/java/com/book/service/LendService.java
+@@ -1,6 +1,7 @@
+ package com.book.service;
+ 
+ import com.book.dao.LendDao;
++import com.book.dao.BookDao;
+ import com.book.domain.Lend;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
+@@ -10,18 +11,42 @@ import java.util.ArrayList;
+ @Service
+ public class LendService {
+     private LendDao lendDao;
++    private BookDao bookDao;
+ 
+     @Autowired
+     public void setLendDao(LendDao lendDao) {
+         this.lendDao = lendDao;
+     }
+ 
++    @Autowired
++    public void setBookDao(BookDao bookDao) {
++        this.bookDao = bookDao;
++    }
++
+     public boolean bookReturn(long bookId){
+         return lendDao.bookReturnOne(bookId)>0 && lendDao.bookReturnTwo(bookId)>0;
+     }
+ 
+     public boolean bookLend(long bookId,int readerId){
+-        return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
++        try {
++            int state = bookDao.getBookState(bookId);
++            if (state != 1) {
++                return false;
++            }
++            int insertResult = lendDao.bookLendOne(bookId, readerId);
++            if (insertResult <= 0) {
++                return false;
++            }
++            try {
++                lendDao.bookLendTwo(bookId);
++            } catch (Exception e) {
++                e.printStackTrace();
++            }
++            return true;
++        } catch (Exception e) {
++            e.printStackTrace();
++            return false;
++        }
+     }
+ 
+     public ArrayList<Lend> lendList(){

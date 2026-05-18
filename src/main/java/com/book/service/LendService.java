@@ -1,6 +1,7 @@
 package com.book.service;
 
 import com.book.dao.LendDao;
+import com.book.dao.BookDao;
 import com.book.domain.Lend;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -10,10 +11,16 @@ import java.util.ArrayList;
 @Service
 public class LendService {
     private LendDao lendDao;
+    private BookDao bookDao;
 
     @Autowired
     public void setLendDao(LendDao lendDao) {
         this.lendDao = lendDao;
+    }
+
+    @Autowired
+    public void setBookDao(BookDao bookDao) {
+        this.bookDao = bookDao;
     }
 
     public boolean bookReturn(long bookId){
@@ -21,7 +28,25 @@ public class LendService {
     }
 
     public boolean bookLend(long bookId,int readerId){
-        return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
+        try {
+            int state = bookDao.getBookState(bookId);
+            if (state != 1) {
+                return false;
+            }
+            int insertResult = lendDao.bookLendOne(bookId, readerId);
+            if (insertResult <= 0) {
+                return false;
+            }
+            try {
+                lendDao.bookLendTwo(bookId);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public ArrayList<Lend> lendList(){
