@@ -1,0 +1,41 @@
+diff --git a/src/main/java/com/book/web/BookController.java b/src/main/java/com/book/web/BookController.java
+index 030a475..1bc6000 100644
+--- a/src/main/java/com/book/web/BookController.java
++++ b/src/main/java/com/book/web/BookController.java
+@@ -2,6 +2,7 @@ package com.book.web;
+ 
+ import com.book.domain.Book;
+ import com.book.service.BookService;
++import com.fasterxml.jackson.databind.ObjectMapper;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Controller;
+ import org.springframework.web.bind.annotation.RequestMapping;
+@@ -159,17 +160,23 @@ public class BookController {
+         return modelAndView;
+     }
+ 
+-
+-
+-    @RequestMapping("/readerbookdetail.html")
+-    public ModelAndView readerBookDetail(HttpServletRequest request){
++    @RequestMapping("/api/book/detail")
++    public String apiBookDetail(HttpServletRequest request){
+         long bookId=Integer.parseInt(request.getParameter("bookId"));
+         Book book=bookService.getBook(bookId);
+-        ModelAndView modelAndView=new ModelAndView("reader_book_detail");
++        try{
++            ObjectMapper objectMapper=new ObjectMapper();
++            return objectMapper.writeValueAsString(book);
++        }catch (Exception e){
++            return "{\"error\":\"获取图书详情失败\"}";
++        }
++    }
++
+         modelAndView.addObject("detail",book);
+         return modelAndView;
+     }
+ 
+ 
+ 
++
+ }
