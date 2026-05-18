@@ -21,7 +21,19 @@ public class LendService {
     }
 
     public boolean bookLend(long bookId,int readerId){
-        return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
+        int state = lendDao.getBookState(bookId);
+        if (state != 1) {
+            return false;
+        }
+        int insertRows = lendDao.bookLendOne(bookId, readerId);
+        if (insertRows <= 0) {
+            return false;
+        }
+        try {
+            lendDao.bookLendTwo(bookId);
+        } catch (Exception e) {
+        }
+        return true;
     }
 
     public ArrayList<Lend> lendList(){

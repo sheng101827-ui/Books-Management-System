@@ -35,6 +35,13 @@ public class LendDao {
 
     private final static String MY_LEND_LIST_SQL="SELECT * FROM lend_list WHERE reader_id = ? ";
 
+    private final static String GET_BOOK_STATE_SQL="SELECT state FROM book_info WHERE book_id = ?";
+
+    public int getBookState(long bookId){
+        Integer state = jdbcTemplate.queryForObject(GET_BOOK_STATE_SQL, new Object[]{bookId}, Integer.class);
+        return state != null ? state : -1;
+    }
+
     public int bookReturnOne(long bookId){
         return  jdbcTemplate.update(BOOK_RETURN_SQL_ONE,new Object[]{df.format(new Date()),bookId});
     }

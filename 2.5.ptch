@@ -1,0 +1,43 @@
+diff --git a/src/main/java/com/book/dao/LendDao.java b/src/main/java/com/book/dao/LendDao.java
+index f706a87..c54bf6b 100644
+--- a/src/main/java/com/book/dao/LendDao.java
++++ b/src/main/java/com/book/dao/LendDao.java
+@@ -35,6 +35,13 @@ public class LendDao {
+ 
+     private final static String MY_LEND_LIST_SQL="SELECT * FROM lend_list WHERE reader_id = ? ";
+ 
++    private final static String GET_BOOK_STATE_SQL="SELECT state FROM book_info WHERE book_id = ?";
++
++    public int getBookState(long bookId){
++        Integer state = jdbcTemplate.queryForObject(GET_BOOK_STATE_SQL, new Object[]{bookId}, Integer.class);
++        return state != null ? state : -1;
++    }
++
+     public int bookReturnOne(long bookId){
+         return  jdbcTemplate.update(BOOK_RETURN_SQL_ONE,new Object[]{df.format(new Date()),bookId});
+     }
+diff --git a/src/main/java/com/book/service/LendService.java b/src/main/java/com/book/service/LendService.java
+index 2a271cb..b012cd0 100644
+--- a/src/main/java/com/book/service/LendService.java
++++ b/src/main/java/com/book/service/LendService.java
+@@ -21,7 +21,19 @@ public class LendService {
+     }
+ 
+     public boolean bookLend(long bookId,int readerId){
+-        return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
++        int state = lendDao.getBookState(bookId);
++        if (state != 1) {
++            return false;
++        }
++        int insertRows = lendDao.bookLendOne(bookId, readerId);
++        if (insertRows <= 0) {
++            return false;
++        }
++        try {
++            lendDao.bookLendTwo(bookId);
++        } catch (Exception e) {
++        }
++        return true;
+     }
+ 
+     public ArrayList<Lend> lendList(){
