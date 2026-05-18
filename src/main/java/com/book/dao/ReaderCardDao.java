@@ -21,6 +21,7 @@ public class ReaderCardDao {
     private final static String RE_PASSWORD_SQL="UPDATE reader_card set passwd = ? where reader_id = ? ";
     private final static String ADD_READERCARD_SQL="INSERT INTO reader_card (reader_id,name) values ( ? , ?)";
     private final static String UPDATE_READER_NAME_SQL="UPDATE reader_card set name = ? where reader_id = ?";
+    private final static String LOSS_CARD_SQL="UPDATE reader_card set card_state = 0 where reader_id = ?";
 
 
     @Autowired
@@ -61,5 +62,9 @@ public class ReaderCardDao {
 
     public int updateName(int readerId,String name){
         return jdbcTemplate.update(UPDATE_READER_NAME_SQL,new Object[]{name,readerId,});
+    }
+
+    public int lossCard(int readerId){
+        return jdbcTemplate.update(LOSS_CARD_SQL,new Object[]{readerId});
     }
 }

@@ -1,0 +1,108 @@
+diff --git a/src/main/java/com/book/dao/ReaderCardDao.java b/src/main/java/com/book/dao/ReaderCardDao.java
+index 0c39f9f..2b90b30 100644
+--- a/src/main/java/com/book/dao/ReaderCardDao.java
++++ b/src/main/java/com/book/dao/ReaderCardDao.java
+@@ -21,6 +21,7 @@ public class ReaderCardDao {
+     private final static String RE_PASSWORD_SQL="UPDATE reader_card set passwd = ? where reader_id = ? ";
+     private final static String ADD_READERCARD_SQL="INSERT INTO reader_card (reader_id,name) values ( ? , ?)";
+     private final static String UPDATE_READER_NAME_SQL="UPDATE reader_card set name = ? where reader_id = ?";
++    private final static String LOSS_CARD_SQL="UPDATE reader_card set card_state = 0 where reader_id = ?";
+ 
+ 
+     @Autowired
+@@ -62,4 +63,8 @@ public class ReaderCardDao {
+     public int updateName(int readerId,String name){
+         return jdbcTemplate.update(UPDATE_READER_NAME_SQL,new Object[]{name,readerId,});
+     }
++
++    public int lossCard(int readerId){
++        return jdbcTemplate.update(LOSS_CARD_SQL,new Object[]{readerId});
++    }
+ }
+diff --git a/src/main/java/com/book/service/ReaderCardService.java b/src/main/java/com/book/service/ReaderCardService.java
+index 073e91d..58153fb 100644
+--- a/src/main/java/com/book/service/ReaderCardService.java
++++ b/src/main/java/com/book/service/ReaderCardService.java
+@@ -23,4 +23,11 @@ public class ReaderCardService {
+         return readerCardDao.updateName(readerId,name)>0;
+     }
+ 
++    public void lossCard(int readerId){
++        com.book.domain.ReaderCard readerCard = readerCardDao.findReaderByReaderId(readerId);
++        if (readerCard.getReaderId() == 0) {
++            throw new RuntimeException("读者不存在，无法挂失读者卡！");
++        }
++        readerCardDao.lossCard(readerId);
++    }
+ }
+diff --git a/src/main/java/com/book/web/BookController.java b/src/main/java/com/book/web/BookController.java
+index 030a475..6607764 100644
+--- a/src/main/java/com/book/web/BookController.java
++++ b/src/main/java/com/book/web/BookController.java
+@@ -2,8 +2,6 @@ package com.book.web;
+ 
+ import com.book.domain.Book;
+ import com.book.service.BookService;
+-import org.springframework.beans.factory.annotation.Autowired;
+-import org.springframework.stereotype.Controller;
+ import org.springframework.web.bind.annotation.RequestMapping;
+ import org.springframework.web.servlet.ModelAndView;
+ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+@@ -160,16 +158,4 @@ public class BookController {
+     }
+ 
+ 
+-
+-    @RequestMapping("/readerbookdetail.html")
+-    public ModelAndView readerBookDetail(HttpServletRequest request){
+-        long bookId=Integer.parseInt(request.getParameter("bookId"));
+-        Book book=bookService.getBook(bookId);
+-        ModelAndView modelAndView=new ModelAndView("reader_book_detail");
+-        modelAndView.addObject("detail",book);
+-        return modelAndView;
+-    }
+-
+-
+-
+ }
+diff --git a/src/main/java/com/book/web/ReaderController.java b/src/main/java/com/book/web/ReaderController.java
+index f71b5f5..52dd0ed 100644
+--- a/src/main/java/com/book/web/ReaderController.java
++++ b/src/main/java/com/book/web/ReaderController.java
+@@ -294,4 +294,20 @@ public class ReaderController {
+ 
+ 
+     }
++
++    @RequestMapping("reader_loss_card.html")
++    public String readerLossCard(HttpServletRequest request, RedirectAttributes redirectAttributes){
++        ReaderCard readerCard=(ReaderCard) request.getSession().getAttribute("readercard");
++        int readerId=readerCard.getReaderId();
++        try{
++            readerCardService.lossCard(readerId);
++            request.getSession().removeAttribute("readercard");
++            redirectAttributes.addFlashAttribute("succ", "读者卡挂失成功！");
++            return "redirect:/reader_main.html";
++        }catch (RuntimeException e){
++            request.getSession().removeAttribute("readercard");
++            redirectAttributes.addFlashAttribute("error", e.getMessage());
++            return "redirect:/reader_main.html";
++        }
++    }
+ }
+diff --git a/src/main/webapp/WEB-INF/jsp/reader_main.jsp b/src/main/webapp/WEB-INF/jsp/reader_main.jsp
+index 3e8e0be..5dbd712 100644
+--- a/src/main/webapp/WEB-INF/jsp/reader_main.jsp
++++ b/src/main/webapp/WEB-INF/jsp/reader_main.jsp
+@@ -47,6 +47,11 @@
+                         密码修改
+                     </a>
+                 </li>
++                <li >
++                    <a href="reader_loss_card.html" >
++                        挂失读者卡
++                    </a>
++                </li>
+             </ul>
+             <ul class="nav navbar-nav navbar-right">
+                 <li><a href="reader_info.html"><span class="glyphicon glyphicon-user"></span>&nbsp;${readercard.name}，已登录</a></li>

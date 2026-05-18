@@ -23,4 +23,11 @@ public class ReaderCardService {
         return readerCardDao.updateName(readerId,name)>0;
     }
 
+    public void lossCard(int readerId){
+        com.book.domain.ReaderCard readerCard = readerCardDao.findReaderByReaderId(readerId);
+        if (readerCard.getReaderId() == 0) {
+            throw new RuntimeException("读者不存在，无法挂失读者卡！");
+        }
+        readerCardDao.lossCard(readerId);
+    }
 }

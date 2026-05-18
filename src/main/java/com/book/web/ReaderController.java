@@ -294,4 +294,20 @@ public class ReaderController {
 
 
     }
+
+    @RequestMapping("reader_loss_card.html")
+    public String readerLossCard(HttpServletRequest request, RedirectAttributes redirectAttributes){
+        ReaderCard readerCard=(ReaderCard) request.getSession().getAttribute("readercard");
+        int readerId=readerCard.getReaderId();
+        try{
+            readerCardService.lossCard(readerId);
+            request.getSession().removeAttribute("readercard");
+            redirectAttributes.addFlashAttribute("succ", "读者卡挂失成功！");
+            return "redirect:/reader_main.html";
+        }catch (RuntimeException e){
+            request.getSession().removeAttribute("readercard");
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+            return "redirect:/reader_main.html";
+        }
+    }
 }

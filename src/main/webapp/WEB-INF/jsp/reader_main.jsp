@@ -47,6 +47,11 @@
                         密码修改
                     </a>
                 </li>
+                <li >
+                    <a href="reader_loss_card.html" >
+                        挂失读者卡
+                    </a>
+                </li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
                 <li><a href="reader_info.html"><span class="glyphicon glyphicon-user"></span>&nbsp;${readercard.name}，已登录</a></li>
