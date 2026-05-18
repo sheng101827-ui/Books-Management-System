@@ -1,0 +1,170 @@
+diff --git a/src/main/java/com/book/dao/LendDao.java b/src/main/java/com/book/dao/LendDao.java
+index f706a87..d7588e8 100644
+--- a/src/main/java/com/book/dao/LendDao.java
++++ b/src/main/java/com/book/dao/LendDao.java
+@@ -1,61 +1,64 @@
+ package com.book.dao;
+ 
++import com.book.domain.Lend;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.jdbc.core.JdbcTemplate;
+ import org.springframework.jdbc.core.RowCallbackHandler;
+ import org.springframework.stereotype.Repository;
+-import com.book.domain.Lend;
+ 
+-import java.sql.Array;
+ import java.sql.ResultSet;
+ import java.sql.SQLException;
+ import java.text.SimpleDateFormat;
+ import java.util.ArrayList;
+ import java.util.Date;
++
+ @Repository
+ public class LendDao {
+ 
++    private static final String BOOK_RETURN_SQL_ONE = "UPDATE lend_list SET back_date = ? WHERE book_id = ? AND back_date is NULL";
++    private static final String BOOK_RETURN_SQL_TWO = "UPDATE book_info SET state = 1 WHERE book_id = ?";
++    private static final String BOOK_LEND_SQL_ONE = "INSERT INTO lend_list (book_id,reader_id,lend_date) VALUES ( ? , ? , ? )";
++    private static final String BOOK_LEND_SQL_TWO = "UPDATE book_info SET state = 0 WHERE book_id = ? AND state = 1";
++    private static final String BOOK_LEND_ROLLBACK_SQL = "UPDATE book_info SET state = 1 WHERE book_id = ? AND state = 0";
++    private static final String LEND_LIST_SQL = "SELECT * FROM lend_list";
++    private static final String MY_LEND_LIST_SQL = "SELECT * FROM lend_list WHERE reader_id = ?";
++
++    private final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
++
+     private JdbcTemplate jdbcTemplate;
+-    SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+ 
+     @Autowired
+     public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
+         this.jdbcTemplate = jdbcTemplate;
+     }
+ 
+-    private final static String BOOK_RETURN_SQL_ONE="UPDATE lend_list SET back_date = ? WHERE book_id = ? AND back_date is NULL";
+-
+-    private final static String BOOK_RETURN_SQL_TWO="UPDATE book_info SET state = 1 WHERE book_id = ? ";
+-
+-    private final static String BOOK_LEND_SQL_ONE="INSERT INTO lend_list (book_id,reader_id,lend_date) VALUES ( ? , ? , ? )";
+-
+-    private final static String BOOK_LEND_SQL_TWO="UPDATE book_info SET state = 0 WHERE book_id = ? ";
+-
+-    private final static String LEND_LIST_SQL="SELECT * FROM lend_list";
+-
+-    private final static String MY_LEND_LIST_SQL="SELECT * FROM lend_list WHERE reader_id = ? ";
+-
+-    public int bookReturnOne(long bookId){
+-        return  jdbcTemplate.update(BOOK_RETURN_SQL_ONE,new Object[]{df.format(new Date()),bookId});
++    public int bookReturnOne(long bookId) {
++        return jdbcTemplate.update(BOOK_RETURN_SQL_ONE, df.format(new Date()), bookId);
+     }
+-    public int bookReturnTwo(long bookId){
+-        return jdbcTemplate.update(BOOK_RETURN_SQL_TWO,new Object[]{bookId});
++
++    public int bookReturnTwo(long bookId) {
++        return jdbcTemplate.update(BOOK_RETURN_SQL_TWO, bookId);
+     }
+-    public int bookLendOne(long bookId,int readerId){
+-        return  jdbcTemplate.update(BOOK_LEND_SQL_ONE,new Object[]{bookId,readerId,df.format(new Date())});
++
++    public int bookLendOne(long bookId, int readerId) {
++        return jdbcTemplate.update(BOOK_LEND_SQL_ONE, bookId, readerId, df.format(new Date()));
+     }
+-    public int bookLendTwo(long bookId){
+-        return  jdbcTemplate.update(BOOK_LEND_SQL_TWO,new Object[]{bookId});
++
++    public int bookLendTwo(long bookId) {
++        return jdbcTemplate.update(BOOK_LEND_SQL_TWO, bookId);
+     }
+ 
+-    public ArrayList<Lend> lendList(){
+-        final ArrayList<Lend> list=new ArrayList<Lend>();
++    public int rollbackBookLend(long bookId) {
++        return jdbcTemplate.update(BOOK_LEND_ROLLBACK_SQL, bookId);
++    }
+ 
++    public ArrayList<Lend> lendList() {
++        final ArrayList<Lend> list = new ArrayList<Lend>();
+         jdbcTemplate.query(LEND_LIST_SQL, new RowCallbackHandler() {
+             public void processRow(ResultSet resultSet) throws SQLException {
+                 resultSet.beforeFirst();
+-                while (resultSet.next()){
+-                    Lend lend=new Lend();
++                while (resultSet.next()) {
++                    Lend lend = new Lend();
+                     lend.setBackDate(resultSet.getDate("back_date"));
+                     lend.setBookId(resultSet.getLong("book_id"));
+                     lend.setLendDate(resultSet.getDate("lend_date"));
+@@ -68,14 +71,13 @@ public class LendDao {
+         return list;
+     }
+ 
+-    public ArrayList<Lend> myLendList(int readerId){
+-        final ArrayList<Lend> list=new ArrayList<Lend>();
+-
+-        jdbcTemplate.query(MY_LEND_LIST_SQL, new Object[]{readerId},new RowCallbackHandler() {
++    public ArrayList<Lend> myLendList(int readerId) {
++        final ArrayList<Lend> list = new ArrayList<Lend>();
++        jdbcTemplate.query(MY_LEND_LIST_SQL, new Object[]{readerId}, new RowCallbackHandler() {
+             public void processRow(ResultSet resultSet) throws SQLException {
+                 resultSet.beforeFirst();
+-                while (resultSet.next()){
+-                    Lend lend=new Lend();
++                while (resultSet.next()) {
++                    Lend lend = new Lend();
+                     lend.setBackDate(resultSet.getDate("back_date"));
+                     lend.setBookId(resultSet.getLong("book_id"));
+                     lend.setLendDate(resultSet.getDate("lend_date"));
+@@ -86,6 +88,5 @@ public class LendDao {
+             }
+         });
+         return list;
+-
+     }
+ }
+diff --git a/src/main/java/com/book/service/LendService.java b/src/main/java/com/book/service/LendService.java
+index 2a271cb..3cd23c3 100644
+--- a/src/main/java/com/book/service/LendService.java
++++ b/src/main/java/com/book/service/LendService.java
+@@ -9,6 +9,7 @@ import java.util.ArrayList;
+ 
+ @Service
+ public class LendService {
++
+     private LendDao lendDao;
+ 
+     @Autowired
+@@ -16,19 +17,27 @@ public class LendService {
+         this.lendDao = lendDao;
+     }
+ 
+-    public boolean bookReturn(long bookId){
+-        return lendDao.bookReturnOne(bookId)>0 && lendDao.bookReturnTwo(bookId)>0;
++    public boolean bookLend(long bookId, int readerId) {
++        if (lendDao.bookLendTwo(bookId) <= 0) {
++            return false;
++        }
++        try {
++            return lendDao.bookLendOne(bookId, readerId) > 0;
++        } catch (RuntimeException e) {
++            lendDao.rollbackBookLend(bookId);
++            return false;
++        }
+     }
+ 
+-    public boolean bookLend(long bookId,int readerId){
+-        return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
++    public boolean bookReturn(long bookId) {
++        return lendDao.bookReturnOne(bookId) > 0 && lendDao.bookReturnTwo(bookId) > 0;
+     }
+ 
+-    public ArrayList<Lend> lendList(){
++    public ArrayList<Lend> lendList() {
+         return lendDao.lendList();
+     }
+-    public ArrayList<Lend> myLendList(int readerId){
++
++    public ArrayList<Lend> myLendList(int readerId) {
+         return lendDao.myLendList(readerId);
+     }
+-
+ }

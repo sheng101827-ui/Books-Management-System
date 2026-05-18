@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 @Service
 public class LendService {
+
     private LendDao lendDao;
 
     @Autowired
@@ -16,19 +17,27 @@ public class LendService {
         this.lendDao = lendDao;
     }
 
-    public boolean bookReturn(long bookId){
-        return lendDao.bookReturnOne(bookId)>0 && lendDao.bookReturnTwo(bookId)>0;
+    public boolean bookLend(long bookId, int readerId) {
+        if (lendDao.bookLendTwo(bookId) <= 0) {
+            return false;
+        }
+        try {
+            return lendDao.bookLendOne(bookId, readerId) > 0;
+        } catch (RuntimeException e) {
+            lendDao.rollbackBookLend(bookId);
+            return false;
+        }
     }
 
-    public boolean bookLend(long bookId,int readerId){
-        return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
+    public boolean bookReturn(long bookId) {
+        return lendDao.bookReturnOne(bookId) > 0 && lendDao.bookReturnTwo(bookId) > 0;
     }
 
-    public ArrayList<Lend> lendList(){
+    public ArrayList<Lend> lendList() {
         return lendDao.lendList();
     }
-    public ArrayList<Lend> myLendList(int readerId){
+
+    public ArrayList<Lend> myLendList(int readerId) {
         return lendDao.myLendList(readerId);
     }
-
 }
