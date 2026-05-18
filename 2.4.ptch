@@ -1,0 +1,94 @@
+diff --git a/src/main/java/com/book/dao/BookDao.java b/src/main/java/com/book/dao/BookDao.java
+index 378a9b0..4848f70 100644
+--- a/src/main/java/com/book/dao/BookDao.java
++++ b/src/main/java/com/book/dao/BookDao.java
+@@ -31,6 +31,8 @@ public class BookDao {
+     private final static String MATCH_BOOK_SQL="SELECT count(*) FROM book_info WHERE book_id like ?  or name like ?  ";
+     //根据书号查询图书
+     private final static String GET_BOOK_SQL="SELECT * FROM book_info where book_id = ? ";
++    //仅查询图书状态
++    private final static String GET_BOOK_STATE_SQL="SELECT state FROM book_info WHERE book_id = ? ";
+ 
+     public int matchBook(String searchWord){
+         String swcx="%"+searchWord+"%";
+@@ -135,6 +137,10 @@ public class BookDao {
+         });
+         return book;
+     }
++    public int getBookState(long bookId){
++        return jdbcTemplate.queryForObject(GET_BOOK_STATE_SQL, new Object[]{bookId}, Integer.class);
++    }
++
+     public int editBook(Book book){
+         Long bookId=book.getBookId();
+         String name=book.getName();
+diff --git a/src/main/java/com/book/service/LendService.java b/src/main/java/com/book/service/LendService.java
+index 2a271cb..ced6071 100644
+--- a/src/main/java/com/book/service/LendService.java
++++ b/src/main/java/com/book/service/LendService.java
+@@ -1,6 +1,7 @@
+ package com.book.service;
+ 
+ import com.book.dao.LendDao;
++import com.book.dao.BookDao;
+ import com.book.domain.Lend;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
+@@ -10,18 +11,35 @@ import java.util.ArrayList;
+ @Service
+ public class LendService {
+     private LendDao lendDao;
++    private BookDao bookDao;
+ 
+     @Autowired
+     public void setLendDao(LendDao lendDao) {
+         this.lendDao = lendDao;
+     }
+ 
++    @Autowired
++    public void setBookDao(BookDao bookDao) {
++        this.bookDao = bookDao;
++    }
++
+     public boolean bookReturn(long bookId){
+         return lendDao.bookReturnOne(bookId)>0 && lendDao.bookReturnTwo(bookId)>0;
+     }
+ 
+-    public boolean bookLend(long bookId,int readerId){
+-        return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
++    public boolean lendBook(long bookId, int readerId){
++        int state = bookDao.getBookState(bookId);
++        if (state != 1) {
++            return false;
++        }
++        if (lendDao.bookLendOne(bookId, readerId) <= 0) {
++            return false;
++        }
++        try {
++            lendDao.bookLendTwo(bookId);
++        } catch (Exception e) {
++        }
++        return true;
+     }
+ 
+     public ArrayList<Lend> lendList(){
+@@ -31,4 +49,4 @@ public class LendService {
+         return lendDao.myLendList(readerId);
+     }
+ 
+-}
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/book/web/LendController.java b/src/main/java/com/book/web/LendController.java
+index 7078c19..c3336d6 100644
+--- a/src/main/java/com/book/web/LendController.java
++++ b/src/main/java/com/book/web/LendController.java
+@@ -38,7 +38,7 @@ public class LendController {
+     @RequestMapping("/lendbookdo.html")
+     public String bookLendDo(HttpServletRequest request,RedirectAttributes redirectAttributes,int readerId){
+         long bookId=Integer.parseInt(request.getParameter("id"));
+-        boolean lendsucc=lendService.bookLend(bookId,readerId);
++        boolean lendsucc=lendService.lendBook(bookId,readerId);
+         if (lendsucc){
+             redirectAttributes.addFlashAttribute("succ", "图书借阅成功！");
+             return "redirect:/allbooks.html";

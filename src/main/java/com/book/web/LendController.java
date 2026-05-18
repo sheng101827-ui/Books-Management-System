@@ -38,7 +38,7 @@ public class LendController {
     @RequestMapping("/lendbookdo.html")
     public String bookLendDo(HttpServletRequest request,RedirectAttributes redirectAttributes,int readerId){
         long bookId=Integer.parseInt(request.getParameter("id"));
-        boolean lendsucc=lendService.bookLend(bookId,readerId);
+        boolean lendsucc=lendService.lendBook(bookId,readerId);
         if (lendsucc){
             redirectAttributes.addFlashAttribute("succ", "图书借阅成功！");
             return "redirect:/allbooks.html";

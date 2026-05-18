@@ -31,6 +31,8 @@ public class BookDao {
     private final static String MATCH_BOOK_SQL="SELECT count(*) FROM book_info WHERE book_id like ?  or name like ?  ";
     //根据书号查询图书
     private final static String GET_BOOK_SQL="SELECT * FROM book_info where book_id = ? ";
+    //仅查询图书状态
+    private final static String GET_BOOK_STATE_SQL="SELECT state FROM book_info WHERE book_id = ? ";
 
     public int matchBook(String searchWord){
         String swcx="%"+searchWord+"%";
@@ -135,6 +137,10 @@ public class BookDao {
         });
         return book;
     }
+    public int getBookState(long bookId){
+        return jdbcTemplate.queryForObject(GET_BOOK_STATE_SQL, new Object[]{bookId}, Integer.class);
+    }
+
     public int editBook(Book book){
         Long bookId=book.getBookId();
         String name=book.getName();
