@@ -2,6 +2,7 @@ package com.book.web;
 
 import com.book.domain.Book;
 import com.book.service.BookService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -159,17 +160,16 @@ public class BookController {
         return modelAndView;
     }
 
-
-
-    @RequestMapping("/readerbookdetail.html")
-    public ModelAndView readerBookDetail(HttpServletRequest request){
-        long bookId=Integer.parseInt(request.getParameter("bookId"));
-        Book book=bookService.getBook(bookId);
-        ModelAndView modelAndView=new ModelAndView("reader_book_detail");
-        modelAndView.addObject("detail",book);
-        return modelAndView;
+    @RequestMapping("/api/book/detail")
+    public String apiBookDetail(HttpServletRequest request) {
+        long bookId = Integer.parseInt(request.getParameter("bookId"));
+        Book book = bookService.getBook(bookId);
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(book);
+        } catch (Exception e) {
+            return "{\"error\":\"JSON serialization failed\"}";
+        }
     }
-
-
 
 }
