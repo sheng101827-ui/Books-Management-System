@@ -39,6 +39,32 @@ public class ReaderController {
         this.readerCardService = readerCardService;
     }
 
+    private com.book.service.ReaderService readerService;
+
+    @Autowired
+    public void setReaderService(com.book.service.ReaderService readerService) {
+        this.readerService = readerService;
+    }
+
+    @RequestMapping("lossCard.html")
+    public String lossCard(HttpServletRequest request, RedirectAttributes redirectAttributes) {
+        try {
+            int readerId;
+            if (request.getParameter("readerId") != null) {
+                readerId = Integer.parseInt(request.getParameter("readerId"));
+            } else {
+                ReaderCard readerCard = (ReaderCard) request.getSession().getAttribute("readercard");
+                readerId = readerCard.getReaderId();
+            }
+            readerService.lossCard(readerId);
+            redirectAttributes.addFlashAttribute("succ", "挂失成功！");
+            return "redirect:/login.html";
+        } catch (RuntimeException e) {
+            request.getSession().removeAttribute("readercard");
+            return "redirect:/"; // 重定向回首页
+        }
+    }
+
     @RequestMapping("allreaders.html")
     public ModelAndView allBooks(){
         ArrayList<ReaderInfo> readers=readerInfoService.readerInfos();
