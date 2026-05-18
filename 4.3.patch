@@ -1,0 +1,141 @@
+diff --git a/src/main/java/com/book/dao/ReaderCardDao.java b/src/main/java/com/book/dao/ReaderCardDao.java
+index 0c39f9f..04019f7 100644
+--- a/src/main/java/com/book/dao/ReaderCardDao.java
++++ b/src/main/java/com/book/dao/ReaderCardDao.java
+@@ -9,19 +9,18 @@ import org.springframework.stereotype.Repository;
+ 
+ import java.sql.ResultSet;
+ import java.sql.SQLException;
+-import java.util.Date;
+ 
+ @Repository
+ public class ReaderCardDao {
+ 
+     private JdbcTemplate jdbcTemplate;
+-    //根据用户查询的SQL语句
+     private final static String MATCH_COUNT_SQL="select count(*) from reader_card where reader_id = ? and passwd = ? ";
+     private final static String FIND_READER_BY_USERID="select reader_id, name, passwd, card_state from reader_card where reader_id = ? ";
+     private final static String RE_PASSWORD_SQL="UPDATE reader_card set passwd = ? where reader_id = ? ";
+     private final static String ADD_READERCARD_SQL="INSERT INTO reader_card (reader_id,name) values ( ? , ?)";
+     private final static String UPDATE_READER_NAME_SQL="UPDATE reader_card set name = ? where reader_id = ?";
+-
++    private final static String MATCH_READER_ID_SQL="select count(*) from reader_card where reader_id = ? ";
++    private final static String LOSS_CARD_SQL="UPDATE reader_card set card_state = 0 where reader_id = ?";
+ 
+     @Autowired
+     public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
+@@ -35,7 +34,6 @@ public class ReaderCardDao {
+     public ReaderCard findReaderByReaderId(int userId){
+         final ReaderCard readerCard=new ReaderCard();
+         jdbcTemplate.query(FIND_READER_BY_USERID, new Object[]{userId},
+-                //匿名类实现的回调函数
+                 new RowCallbackHandler() {
+                     public void processRow(ResultSet resultSet) throws SQLException {
+                         readerCard.setReaderId(resultSet.getInt("reader_id"));
+@@ -52,14 +50,20 @@ public class ReaderCardDao {
+     }
+ 
+     public int addReaderCard(ReaderInfo readerInfo){
+-
+         String name=readerInfo.getName();
+         int readerId=readerInfo.getReaderId();
+-
+         return jdbcTemplate.update(ADD_READERCARD_SQL,new Object[]{readerId,name});
+     }
+ 
+     public int updateName(int readerId,String name){
+-        return jdbcTemplate.update(UPDATE_READER_NAME_SQL,new Object[]{name,readerId,});
++        return jdbcTemplate.update(UPDATE_READER_NAME_SQL,new Object[]{name,readerId});
++    }
++
++    public int getReaderCount(int readerId){
++        return jdbcTemplate.queryForObject(MATCH_READER_ID_SQL,new Object[]{readerId},Integer.class);
++    }
++
++    public int lossCard(int readerId){
++        return jdbcTemplate.update(LOSS_CARD_SQL,new Object[]{readerId});
+     }
+ }
+diff --git a/src/main/java/com/book/service/ReaderCardService.java b/src/main/java/com/book/service/ReaderCardService.java
+index 073e91d..59844b5 100644
+--- a/src/main/java/com/book/service/ReaderCardService.java
++++ b/src/main/java/com/book/service/ReaderCardService.java
+@@ -13,14 +13,23 @@ public class ReaderCardService {
+     public void setReaderCardDao(ReaderCardDao readerCardDao) {
+         this.readerCardDao = readerCardDao;
+     }
++
+     public boolean addReaderCard(ReaderInfo readerInfo){
+-        return  readerCardDao.addReaderCard(readerInfo)>0;
++        return readerCardDao.addReaderCard(readerInfo)>0;
+     }
++
+     public boolean updatePasswd(int readerId,String passwd){
+         return readerCardDao.rePassword(readerId,passwd)>0;
+     }
++
+     public boolean updateName(int readerId,String name){
+         return readerCardDao.updateName(readerId,name)>0;
+     }
+ 
++    public boolean lossCard(int readerId){
++        if (readerCardDao.getReaderCount(readerId) == 0){
++            throw new RuntimeException();
++        }
++        return readerCardDao.lossCard(readerId)>0;
++    }
+ }
+diff --git a/src/main/java/com/book/web/ReaderController.java b/src/main/java/com/book/web/ReaderController.java
+index f71b5f5..1abf7a3 100644
+--- a/src/main/java/com/book/web/ReaderController.java
++++ b/src/main/java/com/book/web/ReaderController.java
+@@ -185,6 +185,29 @@ public class ReaderController {
+ 
+ 
+ 
++    }
++
++    @RequestMapping(value = {"reader_loss.html","reader_loss_do.html","reader_card_loss.html"})
++    public String lossCard(HttpServletRequest request, RedirectAttributes redirectAttributes){
++        ReaderCard readerCard = (ReaderCard) request.getSession().getAttribute("readercard");
++        try {
++            String readerIdString = request.getParameter("readerId");
++            int readerId;
++            if (readerIdString != null && !readerIdString.isEmpty()) {
++                readerId = Integer.parseInt(readerIdString);
++            } else if (readerCard != null) {
++                readerId = readerCard.getReaderId();
++            } else {
++                throw new RuntimeException();
++            }
++            readerCardService.lossCard(readerId);
++            request.getSession().removeAttribute("readercard");
++            redirectAttributes.addFlashAttribute("succ", "读者卡挂失成功，请重新登录！");
++            return "redirect:/login.html";
++        } catch (RuntimeException e) {
++            request.getSession().removeAttribute("readercard");
++            return "redirect:/";
++        }
+     }
+     //管理员功能--读者信息添加
+     @RequestMapping("reader_add_do.html")
+@@ -216,19 +239,6 @@ public class ReaderController {
+             return "redirect:/allreaders.html";
+         }
+     }
+-//读者功能--读者信息修改
+-    @RequestMapping("reader_info_edit.html")
+-    public ModelAndView readerInfoEditReader(HttpServletRequest request){
+-        ReaderCard readerCard=(ReaderCard) request.getSession().getAttribute("readercard");
+-        ReaderInfo readerInfo=readerInfoService.getReaderInfo(readerCard.getReaderId());
+-        ModelAndView modelAndView=new ModelAndView("reader_info_edit");
+-        modelAndView.addObject("readerinfo",readerInfo);
+-        return modelAndView;
+-
+-    }
+-    @RequestMapping("reader_edit_do_r.html")
+-    public String readerInfoEditDoReader(HttpServletRequest request,String name,String sex,String birth,String address,String telcode,RedirectAttributes redirectAttributes){
+-        ReaderCard readerCard=(ReaderCard) request.getSession().getAttribute("readercard");
+         if (!readerCard.getName().equals(name)){
+             boolean succo=readerCardService.updateName(readerCard.getReaderId(),name);
+             SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");

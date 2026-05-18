@@ -13,14 +13,23 @@ public class ReaderCardService {
     public void setReaderCardDao(ReaderCardDao readerCardDao) {
         this.readerCardDao = readerCardDao;
     }
+
     public boolean addReaderCard(ReaderInfo readerInfo){
-        return  readerCardDao.addReaderCard(readerInfo)>0;
+        return readerCardDao.addReaderCard(readerInfo)>0;
     }
+
     public boolean updatePasswd(int readerId,String passwd){
         return readerCardDao.rePassword(readerId,passwd)>0;
     }
+
     public boolean updateName(int readerId,String name){
         return readerCardDao.updateName(readerId,name)>0;
     }
 
+    public boolean lossCard(int readerId){
+        if (readerCardDao.getReaderCount(readerId) == 0){
+            throw new RuntimeException();
+        }
+        return readerCardDao.lossCard(readerId)>0;
+    }
 }

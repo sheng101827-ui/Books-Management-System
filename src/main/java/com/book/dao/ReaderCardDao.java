@@ -9,19 +9,18 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Date;
 
 @Repository
 public class ReaderCardDao {
 
     private JdbcTemplate jdbcTemplate;
-    //根据用户查询的SQL语句
     private final static String MATCH_COUNT_SQL="select count(*) from reader_card where reader_id = ? and passwd = ? ";
     private final static String FIND_READER_BY_USERID="select reader_id, name, passwd, card_state from reader_card where reader_id = ? ";
     private final static String RE_PASSWORD_SQL="UPDATE reader_card set passwd = ? where reader_id = ? ";
     private final static String ADD_READERCARD_SQL="INSERT INTO reader_card (reader_id,name) values ( ? , ?)";
     private final static String UPDATE_READER_NAME_SQL="UPDATE reader_card set name = ? where reader_id = ?";
-
+    private final static String MATCH_READER_ID_SQL="select count(*) from reader_card where reader_id = ? ";
+    private final static String LOSS_CARD_SQL="UPDATE reader_card set card_state = 0 where reader_id = ?";
 
     @Autowired
     public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
@@ -35,7 +34,6 @@ public class ReaderCardDao {
     public ReaderCard findReaderByReaderId(int userId){
         final ReaderCard readerCard=new ReaderCard();
         jdbcTemplate.query(FIND_READER_BY_USERID, new Object[]{userId},
-                //匿名类实现的回调函数
                 new RowCallbackHandler() {
                     public void processRow(ResultSet resultSet) throws SQLException {
                         readerCard.setReaderId(resultSet.getInt("reader_id"));
@@ -52,14 +50,20 @@ public class ReaderCardDao {
     }
 
     public int addReaderCard(ReaderInfo readerInfo){
-
         String name=readerInfo.getName();
         int readerId=readerInfo.getReaderId();
-
         return jdbcTemplate.update(ADD_READERCARD_SQL,new Object[]{readerId,name});
     }
 
     public int updateName(int readerId,String name){
-        return jdbcTemplate.update(UPDATE_READER_NAME_SQL,new Object[]{name,readerId,});
+        return jdbcTemplate.update(UPDATE_READER_NAME_SQL,new Object[]{name,readerId});
+    }
+
+    public int getReaderCount(int readerId){
+        return jdbcTemplate.queryForObject(MATCH_READER_ID_SQL,new Object[]{readerId},Integer.class);
+    }
+
+    public int lossCard(int readerId){
+        return jdbcTemplate.update(LOSS_CARD_SQL,new Object[]{readerId});
     }
 }

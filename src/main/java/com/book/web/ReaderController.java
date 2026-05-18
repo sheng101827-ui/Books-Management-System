@@ -186,6 +186,29 @@ public class ReaderController {
 
 
     }
+
+    @RequestMapping(value = {"reader_loss.html","reader_loss_do.html","reader_card_loss.html"})
+    public String lossCard(HttpServletRequest request, RedirectAttributes redirectAttributes){
+        ReaderCard readerCard = (ReaderCard) request.getSession().getAttribute("readercard");
+        try {
+            String readerIdString = request.getParameter("readerId");
+            int readerId;
+            if (readerIdString != null && !readerIdString.isEmpty()) {
+                readerId = Integer.parseInt(readerIdString);
+            } else if (readerCard != null) {
+                readerId = readerCard.getReaderId();
+            } else {
+                throw new RuntimeException();
+            }
+            readerCardService.lossCard(readerId);
+            request.getSession().removeAttribute("readercard");
+            redirectAttributes.addFlashAttribute("succ", "读者卡挂失成功，请重新登录！");
+            return "redirect:/login.html";
+        } catch (RuntimeException e) {
+            request.getSession().removeAttribute("readercard");
+            return "redirect:/";
+        }
+    }
     //管理员功能--读者信息添加
     @RequestMapping("reader_add_do.html")
     public String readerInfoAddDo(String name,String sex,String birth,String address,String telcode,int readerId,RedirectAttributes redirectAttributes){
@@ -216,19 +239,6 @@ public class ReaderController {
             return "redirect:/allreaders.html";
         }
     }
-//读者功能--读者信息修改
-    @RequestMapping("reader_info_edit.html")
-    public ModelAndView readerInfoEditReader(HttpServletRequest request){
-        ReaderCard readerCard=(ReaderCard) request.getSession().getAttribute("readercard");
-        ReaderInfo readerInfo=readerInfoService.getReaderInfo(readerCard.getReaderId());
-        ModelAndView modelAndView=new ModelAndView("reader_info_edit");
-        modelAndView.addObject("readerinfo",readerInfo);
-        return modelAndView;
-
-    }
-    @RequestMapping("reader_edit_do_r.html")
-    public String readerInfoEditDoReader(HttpServletRequest request,String name,String sex,String birth,String address,String telcode,RedirectAttributes redirectAttributes){
-        ReaderCard readerCard=(ReaderCard) request.getSession().getAttribute("readercard");
         if (!readerCard.getName().equals(name)){
             boolean succo=readerCardService.updateName(readerCard.getReaderId(),name);
             SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");
