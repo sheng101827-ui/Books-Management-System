@@ -1,0 +1,54 @@
+diff --git a/src/main/java/com/book/web/WebConfig.java b/src/main/java/com/book/web/WebConfig.java
+index a122f5a..c8aab73 100644
+--- a/src/main/java/com/book/web/WebConfig.java
++++ b/src/main/java/com/book/web/WebConfig.java
+@@ -1,11 +1,13 @@
+ package com.book.web;
+ 
++import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.ComponentScan;
+ import org.springframework.context.annotation.Configuration;
+ import org.springframework.web.servlet.ViewResolver;
+ import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
+ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
++import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+ import org.springframework.web.servlet.view.InternalResourceViewResolver;
+@@ -16,6 +18,8 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
+ @ComponentScan("com.book.web")
+ public class WebConfig extends WebMvcConfigurerAdapter {
+ 
++    @Autowired
++    private UserInterceptor userInterceptor;
+ 
+     @Bean
+     public ViewResolver viewResolver() {
+@@ -30,6 +34,11 @@ public class WebConfig extends WebMvcConfigurerAdapter {
+         configurer.enable();
+     }
+ 
++    @Override
++    public void addInterceptors(InterceptorRegistry registry) {
++        registry.addInterceptor(userInterceptor).addPathPatterns("/**");
++    }
++
+     @Override
+     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+         registry.addResourceHandler("/img/**")
+diff --git a/src/main/webapp/WEB-INF/book-servlet.xml b/src/main/webapp/WEB-INF/book-servlet.xml
+index a41d8af..70b690c 100644
+--- a/src/main/webapp/WEB-INF/book-servlet.xml
++++ b/src/main/webapp/WEB-INF/book-servlet.xml
+@@ -13,6 +13,10 @@
+     <!-- 扫描web包，应用Spring的注解 -->
+     <context:component-scan base-package="com.book.web"/>
+ 
++    <mvc:interceptors>
++        <bean class="com.book.web.UserInterceptor"/>
++    </mvc:interceptors>
++
+     <!-- 配置视图解析器，将ModelAndView及字符串解析为具体的页面 -->
+     <bean
+             class="org.springframework.web.servlet.view.InternalResourceViewResolver"
