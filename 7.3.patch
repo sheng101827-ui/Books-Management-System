@@ -1,0 +1,23 @@
+diff --git a/src/main/java/com/book/web/WebConfig.java b/src/main/java/com/book/web/WebConfig.java
+index a122f5a..9802dce 100644
+--- a/src/main/java/com/book/web/WebConfig.java
++++ b/src/main/java/com/book/web/WebConfig.java
+@@ -1,5 +1,7 @@
+ package com.book.web;
+ 
++import com.book.interceptor.UserInterceptor;
++import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.ComponentScan;
+ import org.springframework.context.annotation.Configuration;
+@@ -38,4 +40,9 @@ public class WebConfig extends WebMvcConfigurerAdapter {
+         registry.addResourceHandler("/css/**").addResourceLocations("/static/css/");
+         registry.addResourceHandler("/html/**").addResourceLocations("/static/html/");
+     }
++
++    @Override
++    public void addInterceptors(InterceptorRegistry registry) {
++        registry.addInterceptor(new UserInterceptor()).addPathPatterns("/**");
++    }
+ }
+\ No newline at end of file
