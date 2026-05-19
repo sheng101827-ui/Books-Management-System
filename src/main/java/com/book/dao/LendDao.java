@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 @Repository
 public class LendDao {
@@ -31,6 +32,8 @@ public class LendDao {
 
     private final static String BOOK_LEND_SQL_TWO="UPDATE book_info SET state = 0 WHERE book_id = ? ";
 
+    private final static String BOOK_LEND_LOST_CARD_SQL="INSERT INTO lend_list (book_id,reader_id,lend_date,back_date) VALUES ( ? , ? , ? , ? )";
+
     private final static String LEND_LIST_SQL="SELECT * FROM lend_list";
 
     private final static String MY_LEND_LIST_SQL="SELECT * FROM lend_list WHERE reader_id = ? ";
@@ -46,6 +49,12 @@ public class LendDao {
     }
     public int bookLendTwo(long bookId){
         return  jdbcTemplate.update(BOOK_LEND_SQL_TWO,new Object[]{bookId});
+    }
+    public int bookLendLostCard(int readerId){
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DATE, 1);
+        String tomorrow = df.format(cal.getTime());
+        return jdbcTemplate.update(BOOK_LEND_LOST_CARD_SQL,new Object[]{-1,readerId,df.format(new Date()),tomorrow});
     }
 
     public ArrayList<Lend> lendList(){

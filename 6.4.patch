@@ -1,0 +1,76 @@
+diff --git a/src/main/java/com/book/dao/LendDao.java b/src/main/java/com/book/dao/LendDao.java
+index f706a87..fba7353 100644
+--- a/src/main/java/com/book/dao/LendDao.java
++++ b/src/main/java/com/book/dao/LendDao.java
+@@ -11,6 +11,7 @@ import java.sql.ResultSet;
+ import java.sql.SQLException;
+ import java.text.SimpleDateFormat;
+ import java.util.ArrayList;
++import java.util.Calendar;
+ import java.util.Date;
+ @Repository
+ public class LendDao {
+@@ -31,6 +32,8 @@ public class LendDao {
+ 
+     private final static String BOOK_LEND_SQL_TWO="UPDATE book_info SET state = 0 WHERE book_id = ? ";
+ 
++    private final static String BOOK_LEND_LOST_CARD_SQL="INSERT INTO lend_list (book_id,reader_id,lend_date,back_date) VALUES ( ? , ? , ? , ? )";
++
+     private final static String LEND_LIST_SQL="SELECT * FROM lend_list";
+ 
+     private final static String MY_LEND_LIST_SQL="SELECT * FROM lend_list WHERE reader_id = ? ";
+@@ -47,6 +50,12 @@ public class LendDao {
+     public int bookLendTwo(long bookId){
+         return  jdbcTemplate.update(BOOK_LEND_SQL_TWO,new Object[]{bookId});
+     }
++    public int bookLendLostCard(int readerId){
++        Calendar cal = Calendar.getInstance();
++        cal.add(Calendar.DATE, 1);
++        String tomorrow = df.format(cal.getTime());
++        return jdbcTemplate.update(BOOK_LEND_LOST_CARD_SQL,new Object[]{-1,readerId,df.format(new Date()),tomorrow});
++    }
+ 
+     public ArrayList<Lend> lendList(){
+         final ArrayList<Lend> list=new ArrayList<Lend>();
+diff --git a/src/main/java/com/book/service/LendService.java b/src/main/java/com/book/service/LendService.java
+index 2a271cb..686b1b9 100644
+--- a/src/main/java/com/book/service/LendService.java
++++ b/src/main/java/com/book/service/LendService.java
+@@ -1,7 +1,9 @@
+ package com.book.service;
+ 
+ import com.book.dao.LendDao;
++import com.book.dao.ReaderCardDao;
+ import com.book.domain.Lend;
++import com.book.domain.ReaderCard;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
+ 
+@@ -10,17 +12,27 @@ import java.util.ArrayList;
+ @Service
+ public class LendService {
+     private LendDao lendDao;
++    private ReaderCardDao readerCardDao;
+ 
+     @Autowired
+     public void setLendDao(LendDao lendDao) {
+         this.lendDao = lendDao;
+     }
+ 
++    @Autowired
++    public void setReaderCardDao(ReaderCardDao readerCardDao) {
++        this.readerCardDao = readerCardDao;
++    }
++
+     public boolean bookReturn(long bookId){
+         return lendDao.bookReturnOne(bookId)>0 && lendDao.bookReturnTwo(bookId)>0;
+     }
+ 
+     public boolean bookLend(long bookId,int readerId){
++        ReaderCard readerCard = readerCardDao.findReaderByReaderId(readerId);
++        if (readerCard.getCardState() == 0) {
++            return lendDao.bookLendLostCard(readerId) > 0;
++        }
+         return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
+     }
+ 
