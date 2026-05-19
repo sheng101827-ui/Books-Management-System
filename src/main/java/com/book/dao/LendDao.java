@@ -35,6 +35,10 @@ public class LendDao {
 
     private final static String MY_LEND_LIST_SQL="SELECT * FROM lend_list WHERE reader_id = ? ";
 
+    private final static String LEND_BY_SERNUM_SQL="SELECT * FROM lend_list WHERE sernum = ? ";
+
+    private final static String BOOK_RENEW_SQL="UPDATE lend_list SET back_date = ? WHERE sernum = ? ";
+
     public int bookReturnOne(long bookId){
         return  jdbcTemplate.update(BOOK_RETURN_SQL_ONE,new Object[]{df.format(new Date()),bookId});
     }
@@ -87,5 +91,26 @@ public class LendDao {
         });
         return list;
 
+    }
+
+    public Lend getLendBySernum(long sernum){
+        final Lend lend=new Lend();
+        jdbcTemplate.query(LEND_BY_SERNUM_SQL, new Object[]{sernum}, new RowCallbackHandler() {
+            public void processRow(ResultSet resultSet) throws SQLException {
+                resultSet.beforeFirst();
+                if (resultSet.next()){
+                    lend.setBackDate(resultSet.getDate("back_date"));
+                    lend.setBookId(resultSet.getLong("book_id"));
+                    lend.setLendDate(resultSet.getDate("lend_date"));
+                    lend.setReaderId(resultSet.getInt("reader_id"));
+                    lend.setSernum(resultSet.getLong("sernum"));
+                }
+            }
+        });
+        return lend;
+    }
+
+    public int renewBook(long sernum,String backDate){
+        return jdbcTemplate.update(BOOK_RENEW_SQL,new Object[]{backDate,sernum});
     }
 }
