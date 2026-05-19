@@ -1,0 +1,25 @@
+diff --git a/src/main/java/com/book/web/WebConfig.java b/src/main/java/com/book/web/WebConfig.java
+index a122f5a..8f811fd 100644
+--- a/src/main/java/com/book/web/WebConfig.java
++++ b/src/main/java/com/book/web/WebConfig.java
+@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
+ import org.springframework.web.servlet.ViewResolver;
+ import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
+ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
++import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+ import org.springframework.web.servlet.view.InternalResourceViewResolver;
+@@ -38,4 +39,11 @@ public class WebConfig extends WebMvcConfigurerAdapter {
+         registry.addResourceHandler("/css/**").addResourceLocations("/static/css/");
+         registry.addResourceHandler("/html/**").addResourceLocations("/static/html/");
+     }
++
++    @Override
++    public void addInterceptors(InterceptorRegistry registry) {
++        registry.addInterceptor(new UserInterceptor())
++                .addPathPatterns("/**")
++                .excludePathPatterns("/", "/login.html", "/api/loginCheck", "/logout.html");
++    }
+ }
+\ No newline at end of file
