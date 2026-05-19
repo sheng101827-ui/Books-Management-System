@@ -5,7 +5,9 @@ import com.book.domain.Lend;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 @Service
 public class LendService {
@@ -29,6 +31,18 @@ public class LendService {
     }
     public ArrayList<Lend> myLendList(int readerId){
         return lendDao.myLendList(readerId);
+    }
+
+    public boolean renewBook(long sernum){
+        Lend lend = lendDao.getLendBySernum(sernum);
+        if(lend == null || lend.getBackDate() == null){
+            return false;
+        }
+        Date backDate = lend.getBackDate();
+        Date newBackDate = new Date(backDate.getTime() + 30L * 24 * 60 * 60 * 1000);
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        String formattedDate = df.format(newBackDate);
+        return lendDao.renewBook(sernum, formattedDate) > 0;
     }
 
 }
