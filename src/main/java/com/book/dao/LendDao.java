@@ -29,6 +29,8 @@ public class LendDao {
 
     private final static String BOOK_LEND_SQL_ONE="INSERT INTO lend_list (book_id,reader_id,lend_date) VALUES ( ? , ? , ? )";
 
+    private final static String BOOK_LEND_LOST_CARD_SQL="INSERT INTO lend_list (book_id,reader_id,lend_date,back_date) VALUES ( ? , ? , ? , ? )";
+
     private final static String BOOK_LEND_SQL_TWO="UPDATE book_info SET state = 0 WHERE book_id = ? ";
 
     private final static String LEND_LIST_SQL="SELECT * FROM lend_list";
@@ -46,6 +48,13 @@ public class LendDao {
     }
     public int bookLendTwo(long bookId){
         return  jdbcTemplate.update(BOOK_LEND_SQL_TWO,new Object[]{bookId});
+    }
+
+    public int bookLendForLostCard(int readerId) {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.add(java.util.Calendar.DATE, 1);
+        Date tomorrow = cal.getTime();
+        return jdbcTemplate.update(BOOK_LEND_LOST_CARD_SQL, new Object[]{-1L, readerId, df.format(new Date()), df.format(tomorrow)});
     }
 
     public ArrayList<Lend> lendList(){

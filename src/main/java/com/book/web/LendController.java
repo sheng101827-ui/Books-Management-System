@@ -40,14 +40,12 @@ public class LendController {
         long bookId=Integer.parseInt(request.getParameter("id"));
         boolean lendsucc=lendService.bookLend(bookId,readerId);
         if (lendsucc){
-            redirectAttributes.addFlashAttribute("succ", "图书借阅成功！");
+            redirectAttributes.addFlashAttribute("succ", "借书成功");
             return "redirect:/allbooks.html";
         }else {
-            redirectAttributes.addFlashAttribute("succ", "图书借阅成功！");
+            redirectAttributes.addFlashAttribute("error", "借书失败");
             return "redirect:/allbooks.html";
         }
-
-
     }
 
     @RequestMapping("/returnbook.html")

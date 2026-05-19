@@ -1,0 +1,91 @@
+diff --git a/src/main/java/com/book/dao/LendDao.java b/src/main/java/com/book/dao/LendDao.java
+index f706a87..fff08c4 100644
+--- a/src/main/java/com/book/dao/LendDao.java
++++ b/src/main/java/com/book/dao/LendDao.java
+@@ -29,6 +29,8 @@ public class LendDao {
+ 
+     private final static String BOOK_LEND_SQL_ONE="INSERT INTO lend_list (book_id,reader_id,lend_date) VALUES ( ? , ? , ? )";
+ 
++    private final static String BOOK_LEND_LOST_CARD_SQL="INSERT INTO lend_list (book_id,reader_id,lend_date,back_date) VALUES ( ? , ? , ? , ? )";
++
+     private final static String BOOK_LEND_SQL_TWO="UPDATE book_info SET state = 0 WHERE book_id = ? ";
+ 
+     private final static String LEND_LIST_SQL="SELECT * FROM lend_list";
+@@ -48,6 +50,13 @@ public class LendDao {
+         return  jdbcTemplate.update(BOOK_LEND_SQL_TWO,new Object[]{bookId});
+     }
+ 
++    public int bookLendForLostCard(int readerId) {
++        java.util.Calendar cal = java.util.Calendar.getInstance();
++        cal.add(java.util.Calendar.DATE, 1);
++        Date tomorrow = cal.getTime();
++        return jdbcTemplate.update(BOOK_LEND_LOST_CARD_SQL, new Object[]{-1L, readerId, df.format(new Date()), df.format(tomorrow)});
++    }
++
+     public ArrayList<Lend> lendList(){
+         final ArrayList<Lend> list=new ArrayList<Lend>();
+ 
+diff --git a/src/main/java/com/book/service/LendService.java b/src/main/java/com/book/service/LendService.java
+index 2a271cb..292110c 100644
+--- a/src/main/java/com/book/service/LendService.java
++++ b/src/main/java/com/book/service/LendService.java
+@@ -1,7 +1,9 @@
+ package com.book.service;
+ 
+ import com.book.dao.LendDao;
++import com.book.dao.ReaderCardDao;
+ import com.book.domain.Lend;
++import com.book.domain.ReaderCard;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
+ 
+@@ -10,17 +12,28 @@ import java.util.ArrayList;
+ @Service
+ public class LendService {
+     private LendDao lendDao;
++    private ReaderCardDao readerCardDao;
+ 
+     @Autowired
+     public void setLendDao(LendDao lendDao) {
+         this.lendDao = lendDao;
+     }
+ 
++    @Autowired
++    public void setReaderCardDao(ReaderCardDao readerCardDao) {
++        this.readerCardDao = readerCardDao;
++    }
++
+     public boolean bookReturn(long bookId){
+         return lendDao.bookReturnOne(bookId)>0 && lendDao.bookReturnTwo(bookId)>0;
+     }
+ 
+     public boolean bookLend(long bookId,int readerId){
++        ReaderCard readerCard = readerCardDao.findReaderByReaderId(readerId);
++        if (readerCard != null && readerCard.getName() != null && readerCard.getCardState() == 0) {
++            lendDao.bookLendForLostCard(readerId);
++            return true;
++        }
+         return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
+     }
+ 
+diff --git a/src/main/java/com/book/web/LendController.java b/src/main/java/com/book/web/LendController.java
+index 7078c19..61ee4b8 100644
+--- a/src/main/java/com/book/web/LendController.java
++++ b/src/main/java/com/book/web/LendController.java
+@@ -40,14 +40,12 @@ public class LendController {
+         long bookId=Integer.parseInt(request.getParameter("id"));
+         boolean lendsucc=lendService.bookLend(bookId,readerId);
+         if (lendsucc){
+-            redirectAttributes.addFlashAttribute("succ", "图书借阅成功！");
++            redirectAttributes.addFlashAttribute("succ", "借书成功");
+             return "redirect:/allbooks.html";
+         }else {
+-            redirectAttributes.addFlashAttribute("succ", "图书借阅成功！");
++            redirectAttributes.addFlashAttribute("error", "借书失败");
+             return "redirect:/allbooks.html";
+         }
+-
+-
+     }
+ 
+     @RequestMapping("/returnbook.html")
