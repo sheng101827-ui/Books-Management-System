@@ -88,4 +88,22 @@ public class LendDao {
         return list;
 
     }
+
+    public Lend getLend(long sernum) {
+        final Lend lend = new Lend();
+        jdbcTemplate.query("SELECT * FROM lend_list WHERE sernum = ?", new Object[]{sernum}, new RowCallbackHandler() {
+            public void processRow(ResultSet resultSet) throws SQLException {
+                lend.setBackDate(resultSet.getDate("back_date"));
+                lend.setBookId(resultSet.getLong("book_id"));
+                lend.setLendDate(resultSet.getDate("lend_date"));
+                lend.setReaderId(resultSet.getInt("reader_id"));
+                lend.setSernum(resultSet.getLong("sernum"));
+            }
+        });
+        return lend.getSernum() > 0 ? lend : null;
+    }
+
+    public int updateBackDate(long sernum, Date backDate) {
+        return jdbcTemplate.update("UPDATE lend_list SET back_date = ? WHERE sernum = ?", new Object[]{df.format(backDate), sernum});
+    }
 }

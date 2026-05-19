@@ -31,4 +31,16 @@ public class LendService {
         return lendDao.myLendList(readerId);
     }
 
+    public boolean renewBook(long sernum) {
+        Lend lend = lendDao.getLend(sernum);
+        if (lend != null) {
+            java.util.Date backDate = lend.getBackDate();
+            if (backDate != null) {
+                backDate.setDate(backDate.getDate() + 30);
+                return lendDao.updateBackDate(sernum, backDate) > 0;
+            }
+        }
+        return false;
+    }
+
 }
