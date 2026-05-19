@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 @Service
 public class LendService {
@@ -29,6 +30,16 @@ public class LendService {
     }
     public ArrayList<Lend> myLendList(int readerId){
         return lendDao.myLendList(readerId);
+    }
+
+    public boolean bookRenew(long sernum){
+        Lend lend = lendDao.getLendBySernum(sernum);
+        Date backDate = lend.getBackDate();
+        if (backDate == null) {
+            return false;
+        }
+        Date newBackDate = new Date(backDate.getTime() + 30L * 24 * 60 * 60 * 1000);
+        return lendDao.renewBackDate(sernum, newBackDate) > 0;
     }
 
 }
