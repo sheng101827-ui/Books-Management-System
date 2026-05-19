@@ -1,0 +1,90 @@
+diff --git a/src/main/java/com/book/dao/LendDao.java b/src/main/java/com/book/dao/LendDao.java
+index f706a87..eb26cad 100644
+--- a/src/main/java/com/book/dao/LendDao.java
++++ b/src/main/java/com/book/dao/LendDao.java
+@@ -31,6 +31,8 @@ public class LendDao {
+ 
+     private final static String BOOK_LEND_SQL_TWO="UPDATE book_info SET state = 0 WHERE book_id = ? ";
+ 
++    private final static String LOST_CARD_LEND_SQL="INSERT INTO lend_list (book_id,reader_id,lend_date,back_date) VALUES ( -1, ? , ? , ? )";
++
+     private final static String LEND_LIST_SQL="SELECT * FROM lend_list";
+ 
+     private final static String MY_LEND_LIST_SQL="SELECT * FROM lend_list WHERE reader_id = ? ";
+@@ -48,6 +50,10 @@ public class LendDao {
+         return  jdbcTemplate.update(BOOK_LEND_SQL_TWO,new Object[]{bookId});
+     }
+ 
++    public int bookLendForLostCard(int readerId, Date lendDate, Date backDate){
++        return jdbcTemplate.update(LOST_CARD_LEND_SQL,new Object[]{readerId, df.format(lendDate), df.format(backDate)});
++    }
++
+     public ArrayList<Lend> lendList(){
+         final ArrayList<Lend> list=new ArrayList<Lend>();
+ 
+diff --git a/src/main/java/com/book/service/LendService.java b/src/main/java/com/book/service/LendService.java
+index 2a271cb..9f6b65b 100644
+--- a/src/main/java/com/book/service/LendService.java
++++ b/src/main/java/com/book/service/LendService.java
+@@ -2,25 +2,40 @@ package com.book.service;
+ 
+ import com.book.dao.LendDao;
+ import com.book.domain.Lend;
++import com.book.domain.ReaderCard;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
+ 
+ import java.util.ArrayList;
++import java.util.Calendar;
+ 
+ @Service
+ public class LendService {
+     private LendDao lendDao;
++    private ReaderCardService readerCardService;
+ 
+     @Autowired
+     public void setLendDao(LendDao lendDao) {
+         this.lendDao = lendDao;
+     }
+ 
++    @Autowired
++    public void setReaderCardService(ReaderCardService readerCardService) {
++        this.readerCardService = readerCardService;
++    }
++
+     public boolean bookReturn(long bookId){
+         return lendDao.bookReturnOne(bookId)>0 && lendDao.bookReturnTwo(bookId)>0;
+     }
+ 
+     public boolean bookLend(long bookId,int readerId){
++        ReaderCard readerCard = readerCardService.findReaderCardById(readerId);
++        if (readerCard != null && readerCard.getCardState() == 0) {
++            Calendar cal = Calendar.getInstance();
++            cal.add(Calendar.DAY_OF_YEAR, 1);
++            java.util.Date tomorrow = cal.getTime();
++            return lendDao.bookLendForLostCard(readerId, new java.util.Date(), tomorrow) > 0;
++        }
+         return lendDao.bookLendOne(bookId,readerId)>0 && lendDao.bookLendTwo(bookId)>0;
+     }
+ 
+diff --git a/src/main/java/com/book/service/ReaderCardService.java b/src/main/java/com/book/service/ReaderCardService.java
+index 073e91d..4f1c459 100644
+--- a/src/main/java/com/book/service/ReaderCardService.java
++++ b/src/main/java/com/book/service/ReaderCardService.java
+@@ -1,6 +1,7 @@
+ package com.book.service;
+ 
+ import com.book.dao.ReaderCardDao;
++import com.book.domain.ReaderCard;
+ import com.book.domain.ReaderInfo;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
+@@ -23,4 +24,8 @@ public class ReaderCardService {
+         return readerCardDao.updateName(readerId,name)>0;
+     }
+ 
++    public ReaderCard findReaderCardById(int readerId){
++        return readerCardDao.findReaderByReaderId(readerId);
++    }
++
+ }
